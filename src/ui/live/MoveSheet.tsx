@@ -4,7 +4,7 @@ import type { Analysis } from '../../domain/derive';
 import { ROOM_CARDS, cardName, type RoomId } from '../../domain/cards';
 import { secretPassageFrom } from '../../domain/board';
 import { useStore } from '../../store/store';
-import { Sheet, pct } from '../components';
+import { Chip, Sheet, pct } from '../components';
 
 export function MoveSheet(props: {
   game: Game;
@@ -16,40 +16,80 @@ export function MoveSheet(props: {
   const { game, analysis } = props;
   const logMovement = useStore((s) => s.logMovement);
   const selfId = game.players.find((p) => p.isSelf)?.id;
-  const loc = selfId ? analysis.locations[selfId] : undefined;
-  const currentRoom = loc?.location.kind === 'room' ? loc.location.room : undefined;
-  const passageTo = currentRoom ? secretPassageFrom(currentRoom) : undefined;
+  const current = game.players[game.cursor.seatIndex];
 
+  const [moverId, setMoverId] = useState<string | null>(null);
   const [dest, setDest] = useState<RoomId | 'hallway' | null>(null);
   const [viaPassage, setViaPassage] = useState(false);
 
+  const mover = game.players.find((p) => p.id === moverId);
+  const moverLoc = moverId ? analysis.locations[moverId] : undefined;
+  const currentRoom = moverLoc?.location.kind === 'room' ? moverLoc.location.room : undefined;
+  const passageTo = currentRoom ? secretPassageFrom(currentRoom) : undefined;
+
   useEffect(() => {
     if (props.open) {
+      // Like Suggest/Accuse, default to whoever's turn it is.
+      const fallback =
+        current && !analysis.eliminated[current.id] ? current.id : (selfId ?? null);
+      setMoverId(fallback);
       setDest(props.initialRoom ?? null);
-      setViaPassage(props.initialRoom != null && props.initialRoom === passageTo);
+      const loc = fallback ? analysis.locations[fallback] : undefined;
+      const passage =
+        loc?.location.kind === 'room' ? secretPassageFrom(loc.location.room) : undefined;
+      setViaPassage(props.initialRoom != null && props.initialRoom === passage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.open]);
 
   const save = () => {
-    if (!selfId || dest == null) return;
+    if (!moverId || dest == null) return;
     logMovement(game.id, {
-      playerId: selfId,
+      playerId: moverId,
       to: dest === 'hallway' ? { kind: 'hallway' } : { kind: 'room', room: dest },
       arrival: dest !== 'hallway' && viaPassage && dest === passageTo ? 'secret_passage' : 'self',
     });
     props.onClose();
   };
 
+  const isSelfMove = moverId === selfId;
+
   return (
-    <Sheet open={props.open} title="Update your location" onClose={props.onClose}>
+    <Sheet open={props.open} title="Log a move" onClose={props.onClose}>
+      <div className="chip-row" style={{ marginBottom: 10 }}>
+        {game.players.map((p) => (
+          <Chip
+            key={p.id}
+            label={p.isSelf ? `${p.name} (you)` : p.name}
+            color={p.color}
+            selected={moverId === p.id}
+            disabled={analysis.eliminated[p.id]}
+            eliminated={analysis.eliminated[p.id]}
+            onClick={() => {
+              setMoverId(p.id);
+              setViaPassage(false);
+            }}
+          />
+        ))}
+      </div>
       <p className="hint">
-        Where did your token end up this turn?
-        {currentRoom ? ` You're in the ${cardName(currentRoom)}.` : " You're in the hallway."}
+        {isSelfMove ? 'Where did your token end up this turn?' : `Where did ${mover?.name ?? 'their'}’s token end up?`}
+        {currentRoom
+          ? ` ${isSelfMove ? 'You’re' : 'They’re'} in the ${cardName(currentRoom)} now.`
+          : ` ${isSelfMove ? 'You’re' : 'They’re'} in the hallway now.`}
+        {!isSelfMove && ' Tracking other tokens is optional — it doesn’t affect deductions.'}
       </p>
       <div className="room-grid">
         {ROOM_CARDS.map((c) => {
           const r = c.id as RoomId;
+          const sub =
+            currentRoom === r
+              ? 'here now'
+              : isSelfMove
+                ? `reach ${pct(analysis.reach[r])}`
+                : passageTo === r
+                  ? 'via secret passage'
+                  : '';
           return (
             <button
               key={r}
@@ -66,9 +106,7 @@ export function MoveSheet(props: {
               aria-pressed={dest === r}
             >
               <span className="room-name">{c.name}</span>
-              <span className="room-reach">
-                {currentRoom === r ? 'here now' : `reach ${pct(analysis.reach[r])}`}
-              </span>
+              {sub && <span className="room-reach">{sub}</span>}
             </button>
           );
         })}
@@ -86,7 +124,7 @@ export function MoveSheet(props: {
       {dest != null && dest !== 'hallway' && dest === passageTo && (
         <div style={{ marginTop: 12 }}>
           <p className="step-q" style={{ marginBottom: 6 }}>
-            How did you get there?
+            {isSelfMove ? 'How did you get there?' : 'How did they get there?'}
           </p>
           <div className="sheet-actions" style={{ marginTop: 0 }}>
             <button
@@ -114,7 +152,7 @@ export function MoveSheet(props: {
         <button
           type="button"
           className="btn btn-primary"
-          disabled={dest == null}
+          disabled={dest == null || moverId == null}
           onClick={save}
         >
           Save move

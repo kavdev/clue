@@ -111,6 +111,7 @@ export default function Live() {
   if (game.status !== 'in_progress') return null;
 
   const current = game.players[game.cursor.seatIndex];
+  const isMyTurn = !!current?.isSelf;
   const self = game.players.find((p) => p.isSelf)!;
   const selfLoc = analysis.locations[self.id];
   const currentRoom = selfLoc.location.kind === 'room' ? selfLoc.location.room : undefined;
@@ -190,7 +191,7 @@ export default function Live() {
 
       <EnvelopePanel game={game} analysis={analysis} />
 
-      {!analysis.accuseNow && analysis.recommendations.length > 0 && (
+      {isMyTurn && !analysis.accuseNow && analysis.recommendations.length > 0 && (
         <SectionPanel label="Recommended next move">
           {analysis.recommendations.map((rec, i) => (
             <div key={`${rec.room}`} className={'rec' + (i === 0 ? ' rec-best' : '')}>
@@ -211,6 +212,7 @@ export default function Live() {
         </SectionPanel>
       )}
 
+      {isMyTurn && (
       <SectionPanel
         label="Your position"
         extra={
@@ -257,6 +259,7 @@ export default function Live() {
           Reach = odds of entering on a 2d6 roll this turn. Tap a room when you’ve moved.
         </p>
       </SectionPanel>
+      )}
 
       <SectionPanel label="Deduction grid">
         <DeductionGrid game={game} analysis={analysis} />

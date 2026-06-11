@@ -44,6 +44,30 @@ describe('app shell', () => {
     expect(screen.getByText(/TURN 1/i)).toBeTruthy();
   });
 
+  it("hides your recommendations and position on another player's turn", () => {
+    const s = useStore.getState();
+    const a = s.addRosterPlayer('Alex');
+    const b = s.addRosterPlayer('Blair');
+    const c = s.addRosterPlayer('Casey');
+    const gameId = useStore.getState().createGame();
+    useStore.getState().setGamePlayers(gameId, [a.id, b.id, c.id]);
+    useStore.getState().setSelf(gameId, a.id);
+    // Blair plays Scarlett, so the opening turn belongs to Blair, not you.
+    useStore.getState().setSuspect(gameId, a.id, 'plum');
+    useStore.getState().setSuspect(gameId, b.id, 'scarlett');
+    useStore.getState().setSuspect(gameId, c.id, 'peacock');
+    const hand: CardId[] = ['mustard', 'dagger', 'kitchen', 'ballroom', 'hall', 'white'];
+    for (const card of hand) useStore.getState().toggleHandCard(gameId, card);
+    useStore.getState().startGame(gameId);
+
+    window.location.hash = `#/game/${gameId}`;
+    render(<App />);
+    expect(screen.getAllByText('Blair').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Recommended next move/i)).toBeNull();
+    expect(screen.queryByText(/Your position/i)).toBeNull();
+    expect(screen.getByText(/The envelope/i)).toBeTruthy();
+  });
+
   it('renders review for a completed game with the winner', () => {
     const s = useStore.getState();
     const a = s.addRosterPlayer('Alex');
