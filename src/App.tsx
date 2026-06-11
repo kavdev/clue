@@ -24,10 +24,10 @@ function Masthead() {
           </Link>
         )}
         <nav className="masthead-nav" aria-label="Main">
-          <Link to="/leaderboard" className="nav-link" aria-label="Leaderboard">
+          <Link to="/leaderboard" className="nav-link">
             Records
           </Link>
-          <Link to="/settings" className="nav-link" aria-label="Settings">
+          <Link to="/settings" className="nav-link">
             Board
           </Link>
         </nav>
