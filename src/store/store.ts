@@ -413,6 +413,7 @@ export const useStore = create<ClueState>((set, get) => {
 
     prevTurn: (gameId) => {
       updateGame(gameId, (g) => {
+        if (g.cursor.turn <= 1) return null; // already at the opening turn
         const n = g.players.length;
         const facts = extractFacts(g);
         let idx = g.cursor.seatIndex;
@@ -423,7 +424,7 @@ export const useStore = create<ClueState>((set, get) => {
             break;
           }
         }
-        g.cursor = { turn: Math.max(1, g.cursor.turn - 1), seatIndex: idx };
+        g.cursor = { turn: g.cursor.turn - 1, seatIndex: idx };
         return g;
       });
     },

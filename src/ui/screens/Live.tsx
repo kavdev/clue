@@ -117,6 +117,8 @@ export default function Live() {
   const currentRoom = selfLoc.location.kind === 'room' ? selfLoc.location.room : undefined;
   const passageTo = currentRoom ? secretPassageFrom(currentRoom) : undefined;
   const lastEvent = game.events[game.events.length - 1];
+  // Undo is turn-scoped: step back to an entry's turn before removing it.
+  const canUndo = lastEvent != null && lastEvent.turn === game.cursor.turn;
 
   // One move, one suggestion, one accusation per turn; advance with ▶.
   const turnEvents = game.events.filter((e) => e.turn === game.cursor.turn);
@@ -132,6 +134,7 @@ export default function Live() {
           type="button"
           className="turn-btn"
           aria-label="Previous turn"
+          disabled={game.cursor.turn <= 1}
           onClick={() => store.prevTurn(game.id)}
         >
           ◀
@@ -156,7 +159,7 @@ export default function Live() {
           {analysis.contradictions.slice(0, 3).map((c, i) => (
             <div key={i}>• {c}</div>
           ))}
-          {lastEvent && (
+          {lastEvent && canUndo ? (
             <button
               type="button"
               className="btn btn-small btn-danger"
@@ -165,7 +168,11 @@ export default function Live() {
             >
               Undo last entry
             </button>
-          )}
+          ) : lastEvent ? (
+            <div style={{ marginTop: 6 }}>
+              Step back to turn {lastEvent.turn} with ◀ to undo the latest entry.
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -280,7 +287,12 @@ export default function Live() {
       </SectionPanel>
 
       <SectionPanel label="Case log" extra={`${game.events.length} entries`}>
-        <Timeline game={game} reverse limit={12} onUndo={() => store.undoLast(game.id)} />
+        <Timeline
+          game={game}
+          reverse
+          limit={12}
+          onUndo={canUndo ? () => store.undoLast(game.id) : undefined}
+        />
         <button
           type="button"
           className="btn btn-quiet btn-small"

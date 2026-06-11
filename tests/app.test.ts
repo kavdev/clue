@@ -116,6 +116,32 @@ describe('setup deal defaults', () => {
   });
 });
 
+describe('turn stepper bounds', () => {
+  beforeEach(() => {
+    useStore.setState({ roster: [], games: [] });
+  });
+
+  it('cannot step before turn 1', () => {
+    const s = useStore.getState();
+    const ids = ['A', 'B', 'C'].map((n) => s.addRosterPlayer(n).id);
+    const gameId = useStore.getState().createGame();
+    useStore.getState().setGamePlayers(gameId, ids);
+    useStore.getState().setSelf(gameId, ids[0]);
+    useStore.getState().startGame(gameId);
+
+    const at = () => useStore.getState().games.find((g) => g.id === gameId)!.cursor;
+    const start = at();
+    expect(start.turn).toBe(1);
+    useStore.getState().prevTurn(gameId);
+    expect(at()).toEqual(start);
+
+    useStore.getState().nextTurn(gameId);
+    expect(at().turn).toBe(2);
+    useStore.getState().prevTurn(gameId);
+    expect(at()).toEqual(start);
+  });
+});
+
 describe('13. win recording', () => {
   beforeEach(() => {
     useStore.setState({ roster: [], games: [] });

@@ -486,6 +486,11 @@ button {
   justify-content: center;
 }
 
+.turn-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 /* --- Envelope ------------------------------------------------------------------ */
 
 .envelope-slot {
