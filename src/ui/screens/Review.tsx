@@ -26,6 +26,8 @@ export default function Review() {
 
   const winner = game.players.find((p) => p.id === game.winnerId);
   const solved = CATEGORIES.filter((c) => game.solution[c]);
+  // Every event records the turn it was logged on; the max is the game length.
+  const turnsPlayed = game.events.reduce((max, e) => Math.max(max, e.turn), 0);
 
   return (
     <div>
@@ -66,6 +68,12 @@ export default function Review() {
               <span className="v">{formatDuration(game.createdAt, game.endedAt)}</span>
             </div>
           </>
+        )}
+        {turnsPlayed > 0 && (
+          <div className="kv">
+            <span className="k">Turns played</span>
+            <span className="v">{turnsPlayed}</span>
+          </div>
         )}
         <div className="kv">
           <span className="k">Entries logged</span>

@@ -49,12 +49,8 @@ export function SuggestSheet(props: {
   const currentPlayer = game.players[game.cursor.seatIndex];
   useEffect(() => {
     if (props.open) {
-      setD({
-        ...FRESH,
-        suggesterId:
-          currentPlayer && !analysis.eliminated[currentPlayer.id] ? currentPlayer.id : null,
-        step: currentPlayer && !analysis.eliminated[currentPlayer.id] ? 1 : 0,
-      });
+      // Turn-by-turn: the suggester is always whoever's turn it is.
+      setD({ ...FRESH, suggesterId: currentPlayer?.id ?? null, step: 1 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.open]);
@@ -116,30 +112,10 @@ export function SuggestSheet(props: {
         items={stepLabels.map((label, i) => ({
           label,
           state: i === d.step ? 'active' : i < d.step ? 'done' : 'todo',
-          onClick: i < d.step ? () => setD({ ...d, step: i }) : undefined,
+          // The first crumb is the current-turn player — fixed, not a step.
+          onClick: i > 0 && i < d.step ? () => setD({ ...d, step: i }) : undefined,
         }))}
       />
-
-      {d.step === 0 && (
-        <>
-          <p className="step-q">Who is suggesting?</p>
-          <div className="chip-row">
-            {game.players.map((p) => (
-              <Chip
-                key={p.id}
-                label={p.isSelf ? `${p.name} (you)` : p.name}
-                color={p.color}
-                selected={d.suggesterId === p.id}
-                disabled={analysis.eliminated[p.id]}
-                eliminated={analysis.eliminated[p.id]}
-                onClick={() =>
-                  setD({ ...FRESH, suggesterId: p.id, step: 1 })
-                }
-              />
-            ))}
-          </div>
-        </>
-      )}
 
       {d.step === 1 && (
         <>
@@ -233,11 +209,13 @@ export function SuggestSheet(props: {
                     const opts = youDis
                       ? named.filter((c) => game.yourHand.includes(c))
                       : [];
+                    // Only one card you could have shown? Skip straight to confirm.
+                    const auto = youDis && opts.length === 1 ? opts[0] : null;
                     setD({
                       ...d,
                       outcome: pid,
-                      shownCard: opts.length === 1 ? opts[0] : null,
-                      step: 5,
+                      shownCard: auto,
+                      step: auto ? 6 : 5,
                     });
                   }}
                 />

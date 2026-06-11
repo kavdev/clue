@@ -16,7 +16,6 @@ import type {
   RosterPlayer,
   Settings,
   SuggestionCards,
-  TurnCursor,
 } from '../domain/types';
 import { extractFacts } from '../domain/derive';
 import { defaultDeal } from '../domain/validate';
@@ -339,33 +338,28 @@ export const useStore = create<ClueState>((set, get) => {
 
     logSuggestion: (gameId, payload) => {
       updateGame(gameId, (g) => {
-        const cursorBefore: TurnCursor = { ...g.cursor };
+        // Turns advance only via the turn stepper: a player may still
+        // accuse after suggesting, so logging must not end the turn.
         appendEvent(g, {
           type: 'suggestion',
           id: uid(),
           at: Date.now(),
           turn: g.cursor.turn,
-          cursorBefore,
+          cursorBefore: { ...g.cursor },
           ...payload,
         });
-        // The suggester's turn is over; self-heal the cursor onto the next seat.
-        const seat = g.players.findIndex((p) => p.id === payload.suggesterId);
-        if (seat >= 0) {
-          g.cursor = { turn: g.cursor.turn + 1, seatIndex: nextActiveSeat(g, seat) };
-        }
         return syncDerived(g);
       });
     },
 
     logAccusation: (gameId, payload) => {
       updateGame(gameId, (g) => {
-        const cursorBefore: TurnCursor = { ...g.cursor };
         appendEvent(g, {
           type: 'accusation',
           id: uid(),
           at: Date.now(),
           turn: g.cursor.turn,
-          cursorBefore,
+          cursorBefore: { ...g.cursor },
           ...payload,
         });
         if (payload.success) {
@@ -373,11 +367,6 @@ export const useStore = create<ClueState>((set, get) => {
           g.winnerId = payload.accuserId;
           g.endedAt = Date.now();
           g.solution = { ...payload.cards };
-        } else {
-          const seat = g.players.findIndex((p) => p.id === payload.accuserId);
-          if (seat >= 0) {
-            g.cursor = { turn: g.cursor.turn + 1, seatIndex: nextActiveSeat(g, seat) };
-          }
         }
         return syncDerived(g);
       });

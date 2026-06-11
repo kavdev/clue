@@ -118,6 +118,13 @@ export default function Live() {
   const passageTo = currentRoom ? secretPassageFrom(currentRoom) : undefined;
   const lastEvent = game.events[game.events.length - 1];
 
+  // One move, one suggestion, one accusation per turn; advance with ▶.
+  const turnEvents = game.events.filter((e) => e.turn === game.cursor.turn);
+  const currentEliminated = current ? analysis.eliminated[current.id] : false;
+  const moveLogged = currentEliminated || turnEvents.some((e) => e.type === 'movement');
+  const suggestionLogged = currentEliminated || turnEvents.some((e) => e.type === 'suggestion');
+  const accusationLogged = currentEliminated || turnEvents.some((e) => e.type === 'accusation');
+
   return (
     <div>
       <div className="turnbar">
@@ -171,10 +178,14 @@ export default function Live() {
               {cardName(analysis.accuseNow.room)}
             </strong>
           </div>
-          <p className="hint">All three categories are proven. On your turn, accuse.</p>
+          <p className="hint">
+            All three categories are proven.{' '}
+            {isMyTurn ? 'Accuse now.' : 'Step to your turn, then accuse.'}
+          </p>
           <button
             type="button"
             className="btn btn-primary btn-block"
+            disabled={!isMyTurn || accusationLogged}
             onClick={() => setSheet('accuse-now')}
           >
             Make your accusation
@@ -240,6 +251,7 @@ export default function Live() {
                 key={r}
                 type="button"
                 className={'room-tile' + (currentRoom === r ? ' here' : '')}
+                disabled={moveLogged}
                 onClick={() => {
                   setMoveTarget(r);
                   setSheet('move');
@@ -256,7 +268,9 @@ export default function Live() {
           })}
         </div>
         <p className="fine" style={{ marginTop: 8 }}>
-          Reach = odds of entering on a 2d6 roll this turn. Tap a room when you’ve moved.
+          {moveLogged
+            ? 'Move logged for this turn — advance with ▶ when the turn is done.'
+            : 'Reach = odds of entering on a 2d6 roll this turn. Tap a room when you’ve moved.'}
         </p>
       </SectionPanel>
       )}
@@ -278,18 +292,29 @@ export default function Live() {
       </SectionPanel>
 
       <div className="actionbar">
-        <button type="button" className="btn" onClick={() => setSheet('move')}>
+        <button
+          type="button"
+          className="btn"
+          disabled={moveLogged}
+          onClick={() => setSheet('move')}
+        >
           Move
         </button>
         <button
           type="button"
           className="btn btn-primary"
+          disabled={suggestionLogged}
           onClick={() => setSheet('suggest')}
           style={{ flex: 1.6 }}
         >
           Suggestion
         </button>
-        <button type="button" className="btn" onClick={() => setSheet('accuse')}>
+        <button
+          type="button"
+          className="btn"
+          disabled={accusationLogged}
+          onClick={() => setSheet('accuse')}
+        >
           Accuse
         </button>
       </div>

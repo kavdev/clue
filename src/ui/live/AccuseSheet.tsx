@@ -12,7 +12,7 @@ import {
   type WeaponId,
 } from '../../domain/cards';
 import { useStore } from '../../store/store';
-import { CardTile, Chip, Crumbs, Sheet } from '../components';
+import { CardTile, Crumbs, Sheet } from '../components';
 
 interface DraftState {
   step: number;
@@ -31,11 +31,11 @@ export function AccuseSheet(props: {
   /** Prefill (e.g. from the "make your accusation" prompt). */
   initial?: SuggestionCards;
 }) {
-  const { game, analysis } = props;
+  const { game } = props;
   const logAccusation = useStore((s) => s.logAccusation);
-  const selfId = game.players.find((p) => p.isSelf)?.id ?? null;
+  const currentPlayer = game.players[game.cursor.seatIndex];
   const [d, setD] = useState<DraftState>({
-    step: 0,
+    step: 1,
     accuserId: null,
     suspect: null,
     weapon: null,
@@ -45,9 +45,10 @@ export function AccuseSheet(props: {
 
   useEffect(() => {
     if (props.open) {
+      // Turn-by-turn: the accuser is always whoever's turn it is.
       setD({
-        step: props.initial ? 4 : 0,
-        accuserId: props.initial ? selfId : null,
+        step: props.initial ? 4 : 1,
+        accuserId: currentPlayer?.id ?? null,
         suspect: props.initial?.suspect ?? null,
         weapon: props.initial?.weapon ?? null,
         room: props.initial?.room ?? null,
@@ -88,28 +89,10 @@ export function AccuseSheet(props: {
         items={stepLabels.map((label, i) => ({
           label,
           state: i === d.step ? 'active' : i < d.step ? 'done' : 'todo',
-          onClick: i < d.step ? () => setD({ ...d, step: i }) : undefined,
+          // The first crumb is the current-turn player — fixed, not a step.
+          onClick: i > 0 && i < d.step ? () => setD({ ...d, step: i }) : undefined,
         }))}
       />
-
-      {d.step === 0 && (
-        <>
-          <p className="step-q">Who is accusing?</p>
-          <div className="chip-row">
-            {game.players.map((p) => (
-              <Chip
-                key={p.id}
-                label={p.isSelf ? `${p.name} (you)` : p.name}
-                color={p.color}
-                selected={d.accuserId === p.id}
-                disabled={analysis.eliminated[p.id]}
-                eliminated={analysis.eliminated[p.id]}
-                onClick={() => setD({ ...d, accuserId: p.id, step: 1 })}
-              />
-            ))}
-          </div>
-        </>
-      )}
 
       {d.step === 1 && (
         <>

@@ -679,6 +679,11 @@ button {
 
 .room-tile.selected .room-reach { color: var(--parchment-deep); }
 
+.room-tile:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* --- Deduction grid --------------------------------------------------------------------- */
 
 .grid-scroll {

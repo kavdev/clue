@@ -4,7 +4,7 @@ import type { Analysis } from '../../domain/derive';
 import { ROOM_CARDS, cardName, type RoomId } from '../../domain/cards';
 import { secretPassageFrom } from '../../domain/board';
 import { useStore } from '../../store/store';
-import { Chip, Sheet, pct } from '../components';
+import { Sheet, pct } from '../components';
 
 export function MoveSheet(props: {
   game: Game;
@@ -15,63 +15,41 @@ export function MoveSheet(props: {
 }) {
   const { game, analysis } = props;
   const logMovement = useStore((s) => s.logMovement);
-  const selfId = game.players.find((p) => p.isSelf)?.id;
-  const current = game.players[game.cursor.seatIndex];
 
-  const [moverId, setMoverId] = useState<string | null>(null);
+  // Turn-by-turn: the mover is always whoever's turn it is.
+  const mover = game.players[game.cursor.seatIndex];
+  const moverLoc = mover ? analysis.locations[mover.id] : undefined;
+  const currentRoom = moverLoc?.location.kind === 'room' ? moverLoc.location.room : undefined;
+  const passageTo = currentRoom ? secretPassageFrom(currentRoom) : undefined;
+  const isSelfMove = !!mover?.isSelf;
+
   const [dest, setDest] = useState<RoomId | 'hallway' | null>(null);
   const [viaPassage, setViaPassage] = useState(false);
 
-  const mover = game.players.find((p) => p.id === moverId);
-  const moverLoc = moverId ? analysis.locations[moverId] : undefined;
-  const currentRoom = moverLoc?.location.kind === 'room' ? moverLoc.location.room : undefined;
-  const passageTo = currentRoom ? secretPassageFrom(currentRoom) : undefined;
-
   useEffect(() => {
     if (props.open) {
-      // Like Suggest/Accuse, default to whoever's turn it is.
-      const fallback =
-        current && !analysis.eliminated[current.id] ? current.id : (selfId ?? null);
-      setMoverId(fallback);
       setDest(props.initialRoom ?? null);
-      const loc = fallback ? analysis.locations[fallback] : undefined;
-      const passage =
-        loc?.location.kind === 'room' ? secretPassageFrom(loc.location.room) : undefined;
-      setViaPassage(props.initialRoom != null && props.initialRoom === passage);
+      setViaPassage(props.initialRoom != null && props.initialRoom === passageTo);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.open]);
 
   const save = () => {
-    if (!moverId || dest == null) return;
+    if (!mover || dest == null) return;
     logMovement(game.id, {
-      playerId: moverId,
+      playerId: mover.id,
       to: dest === 'hallway' ? { kind: 'hallway' } : { kind: 'room', room: dest },
       arrival: dest !== 'hallway' && viaPassage && dest === passageTo ? 'secret_passage' : 'self',
     });
     props.onClose();
   };
 
-  const isSelfMove = moverId === selfId;
-
   return (
-    <Sheet open={props.open} title="Log a move" onClose={props.onClose}>
-      <div className="chip-row" style={{ marginBottom: 10 }}>
-        {game.players.map((p) => (
-          <Chip
-            key={p.id}
-            label={p.isSelf ? `${p.name} (you)` : p.name}
-            color={p.color}
-            selected={moverId === p.id}
-            disabled={analysis.eliminated[p.id]}
-            eliminated={analysis.eliminated[p.id]}
-            onClick={() => {
-              setMoverId(p.id);
-              setViaPassage(false);
-            }}
-          />
-        ))}
-      </div>
+    <Sheet
+      open={props.open}
+      title={isSelfMove ? 'Log your move' : `Log ${mover?.name ?? ''}’s move`}
+      onClose={props.onClose}
+    >
       <p className="hint">
         {isSelfMove ? 'Where did your token end up this turn?' : `Where did ${mover?.name ?? 'their'}’s token end up?`}
         {currentRoom
@@ -152,7 +130,7 @@ export function MoveSheet(props: {
         <button
           type="button"
           className="btn btn-primary"
-          disabled={dest == null || moverId == null}
+          disabled={dest == null || mover == null}
           onClick={save}
         >
           Save move
