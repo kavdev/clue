@@ -805,9 +805,19 @@ table.dgrid {
 }
 
 .banner-error {
-  background: rgba(140, 39, 48, 0.12);
-  border: 1.5px solid var(--oxblood-bright);
-  color: #5d171e;
+  background: linear-gradient(180deg, #7e232b, #5f191f);
+  border: 1.5px solid #b4555e;
+  color: var(--parchment);
+  box-shadow: var(--shadow);
+}
+
+.banner-error strong {
+  color: #fff;
+}
+
+.banner-error .btn-danger {
+  color: var(--parchment);
+  border-color: rgba(242, 232, 205, 0.55);
 }
 
 .banner-accuse {
@@ -819,9 +829,10 @@ table.dgrid {
 }
 
 .banner-warn {
-  background: rgba(201, 166, 79, 0.16);
-  border: 1px solid var(--brass);
-  color: #5d4a14;
+  background: linear-gradient(180deg, #cfab55, #b6923e);
+  border: 1px solid #826617;
+  color: #2e240b;
+  box-shadow: var(--shadow);
 }
 
 /* --- Bottom action bar ------------------------------------------------------------------------ */
